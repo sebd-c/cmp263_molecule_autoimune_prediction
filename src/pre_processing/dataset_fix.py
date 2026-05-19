@@ -67,12 +67,15 @@ def find_empty_instances(df):
     print(f"found {len(empty_instances)} empty instances")
     return empty_instances
 
-def fix_dataset(df):
+def fix_dataset(df,remove_smiles=False):
     df_fixed = df.copy()
 
     #original vartypes 
     print("original vartypes")
     original_vartypes = get_vartypes(df_fixed)
+    
+    if remove_smiles:
+        df_fixed = df_fixed.drop("SMILES", axis=1)
     
     #empty instances
     empty_instances = find_empty_instances(df_fixed)
