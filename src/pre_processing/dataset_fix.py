@@ -1,11 +1,17 @@
 from dis import disco
 import pandas as pd
 
+def save_dataset(df,path="src/dataset/dataset.csv"):
+        df.to_csv(path)
 
 def unite_dataset(path_to_dataset1="", path_to_dataset2=""):
     df1 = pd.read_csv(path_to_dataset1)
     df2 = pd.read_csv(path_to_dataset2)
     df = pd.concat([df1, df2])
+    #df = df.drop(df.columns[0], axis=1)
+    df.reset_index(drop=True, inplace=True)
+
+    save_dataset(df,path="src/dataset/pre_fix_dataset.csv")
     return df
 
 def get_vartypes(df):
@@ -96,3 +102,5 @@ def fix_dataset(df,remove_smiles=False):
     fix_vartypes = get_vartypes(df_fixed)
     
     return df_fixed, fix_vartypes, empty_instances, list_clones, list_homo
+
+
