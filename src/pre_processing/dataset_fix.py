@@ -40,6 +40,26 @@ def get_vartypes(df):
     print(f"binaries -label: {(n_binaries)-1}, categorical: {n_categorical}, numerical: {n_numerical}")
     return dic_vartypes
 
+def get_numeric_vartypes(df, vartypes_dic):
+    numerical_att_dic = {}
+    
+    for col in df.columns:
+        if col in vartypes_dic and vartypes_dic[col] == "numerical":
+            if df[col].dtype == "int64":
+                numerical_att_dic[col] = "int"
+            elif df[col].dtype == "float64":
+                numerical_att_dic[col] = "float"
+            else:
+                import pandas as pd
+                if pd.api.types.is_integer_dtype(df[col]):
+                    numerical_att_dic[col] = "int"
+                elif pd.api.types.is_float_dtype(df[col]):
+                    numerical_att_dic[col] = "float"
+                else:
+                    numerical_att_dic[col] = "numerical_other"
+    
+    return numerical_att_dic
+
 
 def filter_homog_att(df):
     df_filtered = df.copy()
