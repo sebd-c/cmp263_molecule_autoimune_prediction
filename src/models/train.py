@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
@@ -30,7 +31,7 @@ def build_param_grid(model: str) -> dict | None:
     # define model parameters of interest
     selector_k = {"selector__k": [5, 10, 15, 20, "all"]}
 
-    if model == "dt":
+    if model == "decision_tree":
         return {
             "classifier__criterion": ["gini", "entropy"],
             "classifier__max_depth": [None, 3, 5, 10, 20],
@@ -41,7 +42,7 @@ def build_param_grid(model: str) -> dict | None:
             **selector_k,
         }
 
-    elif model == "rf":
+    elif model == "random_forest":
         return {
             "classifier__n_estimators": [5, 10, 15, 20],
             "classifier__criterion": ["gini", "entropy"],
@@ -62,13 +63,13 @@ def build_param_grid(model: str) -> dict | None:
             **selector_k,
         }
 
-    elif model == "nb":
+    elif model == "naive_bayes":
         return {
             "classifier__var_smoothing": [1e-11, 1e-10, 1e-9, 1e-8, 1e-7],
             **selector_k,
         }
 
-    elif model == "xgb":
+    elif model == "xgboost":
         return {
             "classifier__n_estimators": [50, 100, 200],
             "classifier__max_depth": [3, 5, 7, 10],
@@ -107,7 +108,8 @@ def build_model(model: str = "dt",
                                         use_label_encoder=False)
                    }
 
-    pipe = Pipeline([("selector", SelectKBest(score_func=mutual_info_classif)),
+    pipe = Pipeline([("scaler", StandardScaler()),
+                     ("selector", SelectKBest(score_func=mutual_info_classif)),
                      ("classifier", classifiers[model]),
                     ])
 
@@ -131,7 +133,7 @@ def run_cross_validation(model,
                          scoring: dict | None = None,
                         ) -> pd.DataFrame:
     """
-    Evaluate *model* with RepeatedStratifiedKFold and return a tidy DataFrame
+    Evaluate model with RepeatedStratifiedKFold and return a tidy DataFrame
     of per-fold scores.
     """
 
@@ -163,7 +165,7 @@ def save_model(model,
                model_path: str,
               ):
     """
-    Fit *model* on the full training set and saves it as joblib.
+    Fit model on the full training set and saves it as joblib.
     """
     print("[…] Fitting model on full training data…")
     model.fit(X_train, y_train)

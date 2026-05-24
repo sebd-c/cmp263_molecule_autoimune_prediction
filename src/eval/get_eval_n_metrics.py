@@ -19,28 +19,25 @@ from sklearn.tree import export_graphviz
 from sklearn.model_selection import train_test_split
 ##############################################################################################
 
-
-
-
-def get_metrics(y_train, y_pred) -> dict:
+def get_metrics(y) -> dict:
     """
     Returns dictionary of usual Machine Learning classification metrics
     """
     # get accuracies
-    accuracy = accuracy_score(y_train, y_pred)
-    bal_accuracy = balanced_accuracy_score(y_train, y_pred)
+    accuracy = accuracy_score(y)
+    bal_accuracy = balanced_accuracy_score(y)
 
     # get precisions
-    global_precision = precision_score(y_train, y_pred, average='micro')
-    weighted_precision = precision_score(y_train, y_pred, average='weighted')
+    global_precision = precision_score(y, average='micro')
+    weighted_precision = precision_score(y, average='weighted')
 
     # get recalls
-    global_recall = recall_score(y_train, y_pred, average='micro')
-    weighted_recall = recall_score(y_train, y_pred, average='weighted')
+    global_recall = recall_score(y, average='micro')
+    weighted_recall = recall_score(y, average='weighted')
 
     # get f1-score
-    global_f1 = f1_score(y_train, y_pred, average='micro')
-    weighted_f1 = f1_score(y_train, y_pred, average='weighted')
+    global_f1 = f1_score(y, average='micro')
+    weighted_f1 = f1_score(y, average='weighted')
 
     metrics_dict = {'accuracy': accuracy,
                     'bal_accuracy': bal_accuracy,
@@ -53,7 +50,7 @@ def get_metrics(y_train, y_pred) -> dict:
     return metrics_dict
 
 
-def get_confusion_matrix(y_train, y_pred) -> None:
+def get_confusion_matrix(y) -> None:
     """
     Plots confusion matrix of a classification model.
     """
@@ -62,10 +59,10 @@ def get_confusion_matrix(y_train, y_pred) -> None:
     class_names = ['DIA-', 'DIA+']
 
     fig, ax = plt.subplots(figsize=(25, 25))
-    ConfusionMatrixDisplay.from_predictions(y_train, y_pred, ax=ax, normalize='true')
+    ConfusionMatrixDisplay.from_predictions(y, ax=ax, normalize='true')
     ax.xaxis.set_ticklabels(class_names)
     ax.yaxis.set_ticklabels(class_names)
-    _ = ax.set_title('Classification Confusion Matrix Train Normalized')
+    _ = ax.set_title('Classification Confusion Matrix Normalized')
 
     plt.show()
     pass
