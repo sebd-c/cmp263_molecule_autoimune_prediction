@@ -1,0 +1,180 @@
+
+# imports
+import os
+import joblib
+import numpy as np
+import pandas as pd
+
+from sklearn.pipeline import Pipeline
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.naive_bayes import GaussianNB
+from xgboost import XGBClassifier
+from sklearn.metrics import make_scorer, accuracy_score, f1_score, roc_auc_score
+from sklearn.model_selection import (GridSearchCV,
+                                     RepeatedStratifiedKFold,
+                                     cross_validate,
+                                    )
+from sklearn.feature_selection import (mutual_info_classif,
+                                       SelectKBest)
+
+
+#####################################################################
+# module with functions of training process
+def build_param_grid(model: str) -> dict | None:
+    """
+    Return the hyperparameter grid for GridSearchCV.
+    """
+
+    # define model parameters of interest
+    selector_k = {"selector__k": [5, 10, 15, 20, "all"]}
+
+    if model == "dt":
+        return {
+            "classifier__criterion": ["gini", "entropy"],
+            "classifier__max_depth": [None, 3, 5, 10, 20],
+            "classifier__min_samples_split": [2, 5, 10, 20],
+            "classifier__min_samples_leaf": [1, 2, 5, 10],
+            "classifier__max_features": [None, "sqrt", "log2"],
+            "classifier__class_weight": ["balanced"],
+            **selector_k,
+        }
+
+    elif model == "rf":
+        return {
+            "classifier__n_estimators": [5, 10, 15, 20],
+            "classifier__criterion": ["gini", "entropy"],
+            "classifier__max_depth": [None, 3, 5, 10, 20],
+            "classifier__min_samples_split": [2, 5, 10, 20],
+            "classifier__min_samples_leaf": [1, 2, 5, 10],
+            "classifier__max_features": [None, "sqrt", "log2"],
+            "classifier__class_weight": ["balanced"],
+            **selector_k,
+        }
+
+    elif model == "knn":
+        return {
+            "classifier__n_neighbors": [3, 5, 7, 11, 15, 21],
+            "classifier__weights": ["uniform", "distance"],
+            "classifier__metric": ["euclidean", "manhattan", "minkowski"],
+            "classifier__p": [1, 2],
+            **selector_k,
+        }
+
+    elif model == "nb":
+        return {
+            "classifier__var_smoothing": [1e-11, 1e-10, 1e-9, 1e-8, 1e-7],
+            **selector_k,
+        }
+
+    elif model == "xgb":
+        return {
+            "classifier__n_estimators": [50, 100, 200],
+            "classifier__max_depth": [3, 5, 7, 10],
+            "classifier__learning_rate": [0.01, 0.05, 0.1, 0.3],
+            "classifier__subsample": [0.6, 0.8, 1.0],
+            "classifier__colsample_bytree": [0.6, 0.8, 1.0],
+            "classifier__scale_pos_weight": [1, 5, 10, 25],
+            "classifier__reg_alpha": [0, 0.1, 1.0],
+            "classifier__reg_lambda": [1.0, 5.0, 10.0],
+            **selector_k,
+        }
+
+    else:
+        return None
+
+
+# First repetition of the cross-validation nest
+def build_model(model: str = "dt",
+                param_grid: dict | None = None,
+                scoring: str = "f1_weighted",
+                cv_inner: int = 5,
+                random_state: int = 42,
+                verbose: int = 3,
+                ) -> GridSearchCV:
+    """
+    Wrapper for the chosen classifier in SelectKBest
+    then hand it to GridSearchCV.
+    """
+
+    classifiers = {"dt":  DecisionTreeClassifier(random_state=random_state),
+                   "rf":  RandomForestClassifier(random_state=random_state),
+                   "knn": KNeighborsClassifier(),
+                   "nb":  GaussianNB(),
+                   "xgb": XGBClassifier(random_state=random_state,
+                                        eval_metric="logloss",
+                                        use_label_encoder=False)
+                   }
+
+    pipe = Pipeline([("selector", SelectKBest(score_func=mutual_info_classif)),
+                     ("classifier", classifiers[model]),
+                    ])
+
+    search = GridSearchCV(estimator=pipe,
+                          param_grid=param_grid,
+                          scoring=scoring,
+                          cv=cv_inner,
+                          refit=True,
+                          verbose=verbose,
+                          )
+    return search
+
+
+# Second repetition of the cross-validation nest
+def run_cross_validation(model,
+                         X,
+                         y,
+                         n_splits: int = 5,
+                         n_repeats: int = 10,
+                         random_state: int = 42,
+                         scoring: dict | None = None,
+                        ) -> pd.DataFrame:
+    """
+    Evaluate *model* with RepeatedStratifiedKFold and return a tidy DataFrame
+    of per-fold scores.
+    """
+
+    # define cross validation settings
+    cv = RepeatedStratifiedKFold(n_splits= n_splits,
+                                 n_repeats= n_repeats,
+                                 random_state= random_state,
+                                )
+
+    # run cross-validation with specified model
+    cv_results = cross_validate(model,
+                                X,
+                                y,
+                                cv= cv,
+                                scoring= scoring,
+                                return_train_score = True,
+                                )
+
+    # Keep only test scores and strip the "test_" prefix
+    scores_df = pd.DataFrame(cv_results)
+
+    return scores_df
+
+
+# post model training functions, i.e. run on test dataset, save model...
+def save_model(model,
+               X_train,
+               y_train,
+               model_path: str,
+              ):
+    """
+    Fit *model* on the full training set and saves it as joblib.
+    """
+    print("[…] Fitting model on full training data…")
+    model.fit(X_train, y_train)
+    joblib.dump(model, model_path)
+    print(f"Fitted model saved into {model_path}")
+    return model
+
+def load_model(model_path: str):
+    """
+    Load and return a previously saved model.
+    """
+    model = joblib.load(model_path)
+    print(f"Model loaded from {model_path}")
+    return model

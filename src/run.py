@@ -2,10 +2,10 @@
 import os
 import pandas as pd
 
-from src.models.train_dt import (build_model,
-                                 run_cross_validation,
-                                 save_model
-                                 )
+from src.models.train import (build_model,
+                              run_cross_validation,
+                              save_model
+                              )
 from src.plotters.get_plots import plot_cv_metrics
 
 ####################################################################
