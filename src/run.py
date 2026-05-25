@@ -1,30 +1,31 @@
 # imports
 import os
 import pandas as pd
-from src.models.data_split import get_data_split
-from src.models.train import (build_param_grid,
+from typing import Optional
+from models.data_split import get_data_split
+from models.train import (build_param_grid,
                               build_model,
                               get_select_k_best_features,
                               run_cross_validation,
                               save_model
                               )
-from src.plotters.get_plots import (plot_cv_metrics,
+from plotters.get_plots import (plot_cv_metrics,
                                     plot_feature_summary_heatmap,
                                     plot_select_k_best_scores)
 #################################################################################
-# path global vars
-INPUT_PATH = '/home/debs/python_projects/cmp263---autoimune_dataset/src/dataset/fixed_dataset.csv'
-OUTPUT_DIR = '/home/debs/python_projects/cmp263---autoimune_dataset/outputs'
+# relative path to work with other usrs
+INPUT_PATH = 'src/dataset/fixed_dataset.csv'
+OUTPUT_DIR = 'outputs'
 
 #################################################################################
 def run_pipeline(X_train,
                  y_train,
                  # search config
-                 param_grid: dict | None = None,
+                 param_grid: Optional[dict] = None,
                  search_scoring: str = "f1_weighted",
                  cv_inner: int = 5,
                  # outer CV config
-                 cv_scoring: dict | None = None,
+                 cv_scoring: Optional[dict] = None,
                  n_splits: int = 5,
                  n_repeats: int = 10,
                  # output paths

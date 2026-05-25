@@ -5,12 +5,13 @@ import joblib
 import numpy as np
 import pandas as pd
 
+from typing import Optional
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.naive_bayes import GaussianNB
+from sklearn.naive_bayes import ComplementNB # better for unbalanced data
 from xgboost import XGBClassifier
 from sklearn.metrics import make_scorer, accuracy_score, f1_score, roc_auc_score
 from sklearn.model_selection import (GridSearchCV,
@@ -23,7 +24,7 @@ from sklearn.feature_selection import (mutual_info_classif,
 
 #####################################################################
 # module with functions of training process
-def build_param_grid(model: str) -> dict | None:
+def build_param_grid(model: str) -> Optional[dict]:
     """
     Return the hyperparameter grid for GridSearchCV.
     """
@@ -88,7 +89,7 @@ def build_param_grid(model: str) -> dict | None:
 
 # First repetition of the cross-validation nest
 def build_model(model: str = "dt",
-                param_grid: dict | None = None,
+                param_grid: Optional[dict] = None,
                 scoring: str = "f1_weighted",
                 cv_inner: int = 5,
                 random_state: int = 42,
@@ -102,7 +103,7 @@ def build_model(model: str = "dt",
     classifiers = {"dt":  DecisionTreeClassifier(random_state=random_state),
                    "rf":  RandomForestClassifier(random_state=random_state),
                    "knn": KNeighborsClassifier(),
-                   "nb":  GaussianNB(),
+                   "nb":  ComplementNB(),
                    "xgb": XGBClassifier(random_state=random_state,
                                         eval_metric="logloss",
                                         use_label_encoder=False)
@@ -130,7 +131,7 @@ def run_cross_validation(model,
                          n_splits: int = 5,
                          n_repeats: int = 10,
                          random_state: int = 42,
-                         scoring: dict | None = None,
+                         scoring: Optional[dict] = None,
                         ) -> pd.DataFrame:
     """
     Evaluate model with RepeatedStratifiedKFold and return a tidy DataFrame

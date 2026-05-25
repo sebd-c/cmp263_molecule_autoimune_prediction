@@ -16,9 +16,4 @@ df_fix, dic_fix_vartypes, empty_instances, list_clones, list_homo = (
 
 #get_plots.binary_att_proportions(df_fix, dic_fix_vartypes)
 #get_plots.boxplot_numerical(df_fix, dic_fix_vartypes, 4, ignore_attribut="Ipc")
-
 dataset_fix.save_dataset(df_fix, path="src/dataset/fixed_dataset.csv")
-
-
-# I hav eto remove this from here and organize after
-input_fix.discretize_numerical_att(df_fix,vartypes_dic=dic_fix_vartypes,method='quantile', n_bins=4)

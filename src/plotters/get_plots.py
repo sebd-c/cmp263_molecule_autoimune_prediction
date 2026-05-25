@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from scipy.stats import skew, kurtosis
+from typing import Optional
 import os
 ##############################################################################################
 
@@ -91,7 +92,7 @@ def plot_select_k_best_scores(features_df: pd.DataFrame,
                               output_dir: str,
                               file_format: str,
                               model_prefix: str,
-                              top_n: int | None = None,
+                              top_n: Optional[int] = None,
                               ) -> None:
     """
     Plot SelectKBest scores for the selected features.
