@@ -23,8 +23,9 @@ def run_pipeline(X_train,
                  n_repeats: int = 10,
                  # output paths
                  output_dir: str = "outputs",
-                 model_filename: str = "decision_tree_model.joblib",
-                 metrics_filename: str = "cv_metrics.csv",
+                 model_prefix: str = "decision_tree",
+                 model_filename: str = "_model.joblib",
+                 metrics_filename: str = "_cv_metrics.csv",
                  plot_format: str = "png",
                  # misc
                  random_state: int = 42,
@@ -58,6 +59,7 @@ def run_pipeline(X_train,
     plot_cv_metrics(scores_df, output_dir=plots_dir, file_format=plot_format)
 
     print("\n══ Step 4 / 4 — Fitting on full data & saving model ══")
+    model_filename = model_prefix + model_filename
     model_path   = os.path.join(output_dir, model_filename)
     fitted_model = save_model(model, X_train, y_train, model_path=model_path)
     print(f"\nBest params found:\n{fitted_model.best_params_}\n")

@@ -2,27 +2,29 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-
+from scipy.stats import skew, kurtosis
+import os
 ##############################################################################################
 
+# TODO: fix tree plotting here
 
-def draw_tree() -> None:
-    dot_data = StringIO()
-    export_graphviz(
-        clf,
-        out_file=dot_data,
-        feature_names=feature_cols,
-        class_names=class_names,
-        filled=True,
-        rounded=True,
-        special_characters=True,
-    )
-    graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
-    graph.write_png("decision_tree.png")
-    pass
+# def draw_tree()->None:
+#     dot_data = StringIO()
+#     export_graphviz(clf, out_file=dot_data,
+#                     feature_names=feature_cols,
+#                     class_names=class_names,
+#                     filled=True, rounded=True,
+#                     special_characters=True)
+#     graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
+#     graph.write_png('decision_tree.png')
+#     pass
 
 
-def plot_cv_metrics(scores_df: pd.DataFrame) -> None:
+def plot_cv_metrics(scores_df: pd.DataFrame,
+                    output_dir: str,
+                    file_format:str,
+                    model_prefix: str
+                    ) -> None:
     """
     Plot train and test cross-validation metrics as simple boxplots.
     """
@@ -40,21 +42,50 @@ def plot_cv_metrics(scores_df: pd.DataFrame) -> None:
     axes[1].set_title("Test")
 
     plt.tight_layout()
-    plt.show()
+
+    filename = f"{model_prefix}_cv_metrics_boxplot.{file_format}"
+    filepath = os.path.join(output_dir, filename)
+    fig.savefig(filepath)
+    plt.close(fig)
 
 
-# TODO: fix tree plotting here
+def plot_feature_summary_heatmap(df: pd.DataFrame,
+                                 output_dir: str,
+                                 file_format: str,
+                                 model_prefix: str
+                                 ) -> None:
+    """
+    Plot a heatmap of summary statistics across all features.
+    """
+    summary = pd.DataFrame({"mean": df.mean(),
+                            "std": df.std(),
+                            "skewness": df.apply(skew),
+                            "kurtosis": df.apply(kurtosis),
+                            "missing%": df.isnull().mean() * 100,
+                            "zeros%": (df == 0).mean() * 100,
+                            })
 
-# def draw_tree()->None:
-#     dot_data = StringIO()
-#     export_graphviz(clf, out_file=dot_data,
-#                     feature_names=feature_cols,
-#                     class_names=class_names,
-#                     filled=True, rounded=True,
-#                     special_characters=True)
-#     graph = pydotplus.graph_from_dot_data(dot_data.getvalue())
-#     graph.write_png('decision_tree.png')
-#     pass
+    # order to easy visualization
+    summary = summary.sort_values("skewness")
+
+    # Normalize each column so all stats are on the same scale
+    normalized = (summary - summary.mean()) / summary.std()
+
+    fig, ax = plt.subplots(figsize=(10, max(8, len(df.columns) // 5)))
+    sns.heatmap(normalized,
+                ax=ax,
+                cmap="coolwarm",
+                center=0,
+                linewidths=0.3,
+                yticklabels=True,
+                )
+
+    ax.set_title("Feature Distribution Summary (normalized)")
+    plt.tight_layout()
+
+    filepath = os.path.join(output_dir, f"{model_prefix}_feature_summary_heatmap.{file_format}")
+    fig.savefig(filepath)
+    plt.close(fig)
 
 
 def binary_att_proportions(df, vartypes_dic):
