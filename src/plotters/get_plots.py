@@ -52,7 +52,6 @@ def plot_cv_metrics(scores_df: pd.DataFrame,
 def plot_feature_summary_heatmap(df: pd.DataFrame,
                                  output_dir: str,
                                  file_format: str,
-                                 model_prefix: str
                                  ) -> None:
     """
     Plot a heatmap of summary statistics across all features.
@@ -83,7 +82,7 @@ def plot_feature_summary_heatmap(df: pd.DataFrame,
     ax.set_title("Feature Distribution Summary (normalized)")
     plt.tight_layout()
 
-    filepath = os.path.join(output_dir, f"{model_prefix}_feature_summary_heatmap.{file_format}")
+    filepath = os.path.join(output_dir, f"feature_summary_heatmap.{file_format}")
     fig.savefig(filepath)
     plt.close(fig)
 

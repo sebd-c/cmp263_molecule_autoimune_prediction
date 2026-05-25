@@ -7,10 +7,13 @@ from src.models.train import (build_param_grid,
                               run_cross_validation,
                               save_model
                               )
-from src.plotters.get_plots import plot_cv_metrics
+from src.plotters.get_plots import plot_cv_metrics, plot_feature_summary_heatmap
+#################################################################################
+# path global vars
+INPUT_PATH = '/home/debs/python_projects/cmp263---autoimune_dataset/src/dataset/fixed_dataset.csv'
+OUTPUT_DIR = '/home/debs/python_projects/cmp263---autoimune_dataset/outputs'
 
-####################################################################
-
+#################################################################################
 def run_pipeline(X_train,
                  y_train,
                  # search config
@@ -22,10 +25,8 @@ def run_pipeline(X_train,
                  n_splits: int = 5,
                  n_repeats: int = 10,
                  # output paths
-                 output_dir: str = "outputs",
+                 output_dir: str = OUTPUT_DIR,
                  model_prefix: str = "decision_tree",
-                 model_filename: str = "_model.joblib",
-                 metrics_filename: str = "_cv_metrics.csv",
                  plot_format: str = "png",
                  # misc
                  random_state: int = 42,
@@ -34,7 +35,6 @@ def run_pipeline(X_train,
     Whole pipeline function from hyperparameter tuning
     to model fitting in whole dataset
     """
-    os.makedirs(output_dir, exist_ok=True)
 
     print("\n══ Step 1 / 4 — Building GridSearchCV model ══")
     model = build_model(param_grid= param_grid,
@@ -52,14 +52,21 @@ def run_pipeline(X_train,
                                      random_state= random_state,
                                      scoring= cv_scoring,
                                      )
+    # save it as .csv
+    metrics_filename = model_prefix + "_cv_metrics.csv"
+    metrics_output_path = os.path.join(output_dir, metrics_filename)
+    scores_df.to_csv(metrics_output_path, index=False)
     print(scores_df.describe().T[["mean", "std"]].round(4))
 
     print("\n══ Step 3 / 4 — Plotting CV metrics ══")
-    plots_dir = os.path.join(output_dir, "plots")
-    plot_cv_metrics(scores_df, output_dir=plots_dir, file_format=plot_format)
+    plot_cv_metrics(scores_df,
+                    output_dir=OUTPUT_DIR,
+                    file_format=plot_format,
+                    model_prefix=model_prefix
+                    )
 
     print("\n══ Step 4 / 4 — Fitting on full data & saving model ══")
-    model_filename = model_prefix + model_filename
+    model_filename = model_prefix + "_model.joblib"
     model_path   = os.path.join(output_dir, model_filename)
     fitted_model = save_model(model, X_train, y_train, model_path=model_path)
     print(f"\nBest params found:\n{fitted_model.best_params_}\n")
@@ -70,20 +77,43 @@ def run_pipeline(X_train,
             "model_path": model_path,
             }
 
+
 ####################################################
 if __name__ == "__main__":
     # read df
-    data = pd.read_csv('src/dataset/fixed_dataset.csv')
+    data = pd.read_csv(INPUT_PATH)
 
     # split data
     X_train, X_test, y_train, y_test = get_data_split(data, seed=42)
 
+    # save used splits
+    X_train_filename = 'x_train_data.csv'
+    X_train_saved_path = os.path.join(OUTPUT_DIR, X_train_filename)
+    X_train.to_csv(X_train_saved_path, index=False)
+
+    X_test_filename = 'X_test_data.csv'
+    X_test_saved_path = os.path.join(OUTPUT_DIR, X_test_filename)
+    X_test.to_csv(X_test_saved_path, index=False)
+
+    y_train_filename = 'y_train_data.csv'
+    y_train_saved_path = os.path.join(OUTPUT_DIR, y_train_filename)
+    y_train.to_csv(y_train_saved_path, index=False)
+
+    y_test_filename = 'y_test_data.csv'
+    y_test_saved_path = os.path.join(OUTPUT_DIR, y_test_filename)
+    y_test.to_csv(y_test_saved_path, index=False)
+
+    # make param grids by models
     param_grid_dt = build_param_grid(model= "decision_tree")
     param_grid_rf = build_param_grid(model= "random_forest")
     param_grid_knn = build_param_grid(model= "knn")
     param_grid_nb = build_param_grid(model= "naive_bayes")
     param_grid_xgb = build_param_grid(model= "xgboost")
 
+    # plot heatmatp feats
+    plot_feature_summary_heatmap(df= X_train,
+                                 output_dir=OUTPUT_DIR,
+                                 file_format='png')
     # training process
     # decision tree
     results_dt = run_pipeline(X_train=X_train,
@@ -92,9 +122,8 @@ if __name__ == "__main__":
                               cv_inner= 5,
                               n_splits=5,
                               n_repeats=10,
-                              output_dir="src/outputs",
-                              model_filename="decision_tree_model.joblib",
-                              metrics_filename="decision_tree_cv_metrics.csv",
+                              output_dir=OUTPUT_DIR,
+                              model_prefix="decision_tree",
                               random_state = 42,
                               )
 
@@ -105,9 +134,8 @@ if __name__ == "__main__":
                               cv_inner=5,
                               n_splits=5,
                               n_repeats=10,
-                              output_dir="src/outputs",
-                              model_filename="random_forest_model.joblib",
-                              metrics_filename="random_forest_cv_metrics.csv",
+                              output_dir=OUTPUT_DIR,
+                              model_prefix="random_forest",
                               random_state=42,
                               )
 
@@ -118,9 +146,8 @@ if __name__ == "__main__":
                                cv_inner=5,
                                n_splits=5,
                                n_repeats=10,
-                               output_dir="src/outputs",
-                               model_filename="knn_model.joblib",
-                               metrics_filename="knn_cv_metrics.csv",
+                               output_dir=OUTPUT_DIR,
+                               model_prefix="knn_",
                                random_state=42,
                                )
 
@@ -131,9 +158,8 @@ if __name__ == "__main__":
                               cv_inner=5,
                               n_splits=5,
                               n_repeats=10,
-                              output_dir="src/outputs",
-                              model_filename="naive_bayes_model.joblib",
-                              metrics_filename="naive_bayes_cv_metrics.csv",
+                              output_dir=OUTPUT_DIR,
+                              model_prefix="naive_bayes",
                               random_state=42,
                               )
 
@@ -144,9 +170,8 @@ if __name__ == "__main__":
                                cv_inner=5,
                                n_splits=5,
                                n_repeats=10,
-                               output_dir="src/outputs",
-                               model_filename="xgboost_model.joblib",
-                               metrics_filename="xgboost_cv_metrics.csv",
+                               output_dir=OUTPUT_DIR,
+                               model_prefix="xgboost",
                                random_state=42,
                                )
 
