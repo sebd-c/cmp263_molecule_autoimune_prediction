@@ -87,6 +87,36 @@ def plot_feature_summary_heatmap(df: pd.DataFrame,
     plt.close(fig)
 
 
+def plot_select_k_best_scores(features_df: pd.DataFrame,
+                              output_dir: str,
+                              file_format: str,
+                              model_prefix: str,
+                              top_n: int | None = None,
+                              ) -> None:
+    """
+    Plot SelectKBest scores for the selected features.
+    """
+    plot_df = features_df.copy()
+    if top_n is not None:
+        plot_df = plot_df.head(top_n)
+
+    plot_df = plot_df.sort_values("score", ascending=True)
+
+    fig, ax = plt.subplots(figsize=(10, max(4, len(plot_df) * 0.35)))
+    ax.barh(plot_df["feature"], plot_df["score"], color="steelblue")
+    ax.set_xlabel("SelectKBest score")
+    ax.set_ylabel("Feature")
+    ax.set_title("Selected feature scores")
+    ax.grid(axis="x", alpha=0.3)
+
+    plt.tight_layout()
+
+    filepath = os.path.join(output_dir,
+                            f"{model_prefix}_selected_feature_scores.{file_format}")
+    fig.savefig(filepath)
+    plt.close(fig)
+
+
 def binary_att_proportions(df, vartypes_dic):
     binary_cols = []
     for col in vartypes_dic:

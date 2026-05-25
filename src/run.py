@@ -1,13 +1,16 @@
 # imports
 import os
 import pandas as pd
-from models.data_split import get_data_split
+from src.models.data_split import get_data_split
 from src.models.train import (build_param_grid,
                               build_model,
+                              get_select_k_best_features,
                               run_cross_validation,
                               save_model
                               )
-from src.plotters.get_plots import plot_cv_metrics, plot_feature_summary_heatmap
+from src.plotters.get_plots import (plot_cv_metrics,
+                                    plot_feature_summary_heatmap,
+                                    plot_select_k_best_scores)
 #################################################################################
 # path global vars
 INPUT_PATH = '/home/debs/python_projects/cmp263---autoimune_dataset/src/dataset/fixed_dataset.csv'
@@ -60,7 +63,7 @@ def run_pipeline(X_train,
 
     print("\n══ Step 3 / 4 — Plotting CV metrics ══")
     plot_cv_metrics(scores_df,
-                    output_dir=OUTPUT_DIR,
+                    output_dir=output_dir,
                     file_format=plot_format,
                     model_prefix=model_prefix
                     )
@@ -71,9 +74,24 @@ def run_pipeline(X_train,
     fitted_model = save_model(model, X_train, y_train, model_path=model_path)
     print(f"\nBest params found:\n{fitted_model.best_params_}\n")
 
+    selected_features = get_select_k_best_features(fitted_model=fitted_model,
+                                                   feature_names=X_train.columns)
+    selected_features_filename = model_prefix + "_selected_features.csv"
+    selected_features_path = os.path.join(output_dir, selected_features_filename)
+    selected_features.to_csv(selected_features_path, index=False)
+    print(f"\nSelected features saved into {selected_features_path}")
+    print(selected_features[["feature", "score", "rank"]].to_string(index=False))
+
+    plot_select_k_best_scores(features_df=selected_features,
+                              output_dir=output_dir,
+                              file_format=plot_format,
+                              model_prefix=model_prefix,
+                              )
+
     print("\n══ Pipeline complete ══\n")
     return {"model": fitted_model,
             "cv_scores": scores_df,
+            "selected_features": selected_features,
             "model_path": model_path,
             }
 

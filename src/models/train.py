@@ -173,6 +173,26 @@ def save_model(model,
     print(f"Fitted model saved into {model_path}")
     return model
 
+
+def get_select_k_best_features(fitted_model,
+                               feature_names,
+                              ) -> pd.DataFrame:
+    """
+    Return SelectKBest feature scores from a fitted GridSearchCV pipeline.
+    """
+    selector = fitted_model.best_estimator_.named_steps.get("selector")
+
+    features_df = pd.DataFrame({"feature": list(feature_names),
+                                "score": selector.scores_,
+                                "selected": selector.get_support(),
+                                })
+
+    features_df = features_df.sort_values(["selected", "score"],
+                                          ascending=[False, False])
+
+    return features_df.reset_index(drop=True)
+
+
 def load_model(model_path: str):
     """
     Load and return a previously saved model.
