@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
@@ -21,13 +21,11 @@ from sklearn.model_selection import (GridSearchCV,
 from sklearn.feature_selection import (mutual_info_classif,
                                        SelectKBest)
 
-
+#################################################################
 DEFAULT_CV_SCORING = {"recall": "recall_weighted",
                       "precision": "precision_weighted",
                       "accuracy": "accuracy",
                      }
-
-
 #####################################################################
 # module with functions of training process
 def build_param_grid(model: str) -> dict | None:
@@ -72,7 +70,8 @@ def build_param_grid(model: str) -> dict | None:
 
     elif model == "naive_bayes":
         return {
-            "classifier__var_smoothing": [1e-11, 1e-10, 1e-9, 1e-8, 1e-7],
+            "classifier__alpha": [0.001, 0.01, 0.1, 0.5, 1.0, 2.0, 5.0],
+            "classifier__norm": [True, False],
             **selector_k,
         }
 
@@ -115,7 +114,9 @@ def build_model(model: str = "dt",
                                         use_label_encoder=False)
                    }
 
-    pipe = Pipeline([("scaler", StandardScaler()),
+    scaler = MinMaxScaler() if model == "nb" else StandardScaler()
+
+    pipe = Pipeline([("scaler", scaler),
                      ("selector", SelectKBest(score_func=mutual_info_classif)),
                      ("classifier", classifiers[model]),
                     ])
