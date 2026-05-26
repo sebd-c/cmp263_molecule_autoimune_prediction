@@ -134,16 +134,8 @@ def build_model(model: str = "dt",
                               verbose=verbose,
                               n_jobs=-1
                               )
-    search = GridSearchCV(estimator=pipe,
-                          param_grid=param_grid,
-                          scoring=scoring,
-                          cv=cv_inner,
-                          refit=True,
-                          verbose=verbose,
-                          n_jobs=-1
-                          )
+    
     return search
-
 
 # Second repetition of the cross-validation nest
 def run_cross_validation(model,
