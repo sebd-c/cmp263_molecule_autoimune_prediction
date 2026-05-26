@@ -21,6 +21,7 @@ def run_pipeline(X_train,
                  y_train,
                  # search config
                  param_grid: dict | None = None,
+                 model_name: str = "dt",
                  search_scoring: str = "f1_weighted",
                  cv_inner: int = 5,
                  # outer CV config
@@ -40,7 +41,8 @@ def run_pipeline(X_train,
     """
 
     print("\n══ Step 1 / 4 — Building GridSearchCV model ══")
-    model = build_model(param_grid= param_grid,
+    model = build_model(model= model_name,
+                        param_grid= param_grid,
                         scoring= search_scoring,
                         cv_inner= cv_inner,
                         random_state = random_state,
@@ -80,7 +82,6 @@ def run_pipeline(X_train,
     selected_features_path = os.path.join(output_dir, selected_features_filename)
     selected_features.to_csv(selected_features_path, index=False)
     print(f"\nSelected features saved into {selected_features_path}")
-    print(selected_features[["feature", "score", "rank"]].to_string(index=False))
 
     plot_select_k_best_scores(features_df=selected_features,
                               output_dir=output_dir,
@@ -98,6 +99,8 @@ def run_pipeline(X_train,
 
 ####################################################
 if __name__ == "__main__":
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
     # read df
     data = pd.read_csv(INPUT_PATH)
 
@@ -137,6 +140,7 @@ if __name__ == "__main__":
     results_dt = run_pipeline(X_train=X_train,
                               y_train=y_train,
                               param_grid= param_grid_dt,
+                              model_name="dt",
                               cv_inner= 5,
                               n_splits=5,
                               n_repeats=3,
@@ -149,6 +153,7 @@ if __name__ == "__main__":
     results_rf = run_pipeline(X_train=X_train,
                               y_train=y_train,
                               param_grid=param_grid_rf,
+                              model_name="rf",
                               cv_inner=5,
                               n_splits=5,
                               n_repeats=3,
@@ -161,11 +166,12 @@ if __name__ == "__main__":
     results_knn = run_pipeline(X_train=X_train,
                                y_train=y_train,
                                param_grid=param_grid_knn,
+                               model_name="knn",
                                cv_inner=5,
                                n_splits=5,
                                n_repeats=3,
                                output_dir=OUTPUT_DIR,
-                               model_prefix="knn_",
+                               model_prefix="knn",
                                random_state=42,
                                )
 
@@ -173,6 +179,7 @@ if __name__ == "__main__":
     results_nb = run_pipeline(X_train=X_train,
                               y_train=y_train,
                               param_grid=param_grid_nb,
+                              model_name="nb",
                               cv_inner=5,
                               n_splits=5,
                               n_repeats=3,
@@ -184,7 +191,8 @@ if __name__ == "__main__":
     # xgboost
     results_xgb = run_pipeline(X_train=X_train,
                                y_train=y_train,
-                               param_grid=param_grid_dt,
+                               param_grid=param_grid_xgb,
+                               model_name="xgb",
                                cv_inner=5,
                                n_splits=5,
                                n_repeats=3,

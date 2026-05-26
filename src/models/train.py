@@ -22,6 +22,12 @@ from sklearn.feature_selection import (mutual_info_classif,
                                        SelectKBest)
 
 
+DEFAULT_CV_SCORING = {"recall": "recall_weighted",
+                      "precision": "precision_weighted",
+                      "accuracy": "accuracy",
+                     }
+
+
 #####################################################################
 # module with functions of training process
 def build_param_grid(model: str) -> dict | None:
@@ -162,7 +168,7 @@ def run_cross_validation(model,
                                 X,
                                 y,
                                 cv= cv,
-                                scoring= scoring,
+                                scoring= scoring or DEFAULT_CV_SCORING,
                                 return_train_score = True,
                                 n_jobs=-1
                                 )
