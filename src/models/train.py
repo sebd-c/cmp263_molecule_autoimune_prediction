@@ -5,16 +5,16 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from typing import Optional
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.naive_bayes import ComplementNB # better for unbalanced data
+from sklearn.naive_bayes import ComplementNB
 from xgboost import XGBClassifier
 from sklearn.metrics import make_scorer, accuracy_score, f1_score, roc_auc_score
 from sklearn.model_selection import (GridSearchCV,
+                                     RandomizedSearchCV,
                                      RepeatedStratifiedKFold,
                                      cross_validate,
                                     )
@@ -24,7 +24,7 @@ from sklearn.feature_selection import (mutual_info_classif,
 
 #####################################################################
 # module with functions of training process
-def build_param_grid(model: str) -> Optional[dict]:
+def build_param_grid(model: str) -> dict | None:
     """
     Return the hyperparameter grid for GridSearchCV.
     """
@@ -89,7 +89,7 @@ def build_param_grid(model: str) -> Optional[dict]:
 
 # First repetition of the cross-validation nest
 def build_model(model: str = "dt",
-                param_grid: Optional[dict] = None,
+                param_grid: dict | None = None,
                 scoring: str = "f1_weighted",
                 cv_inner: int = 5,
                 random_state: int = 42,
@@ -114,12 +114,33 @@ def build_model(model: str = "dt",
                      ("classifier", classifiers[model]),
                     ])
 
+    if model in ("xgb", "rf", "dt"):
+        search = RandomizedSearchCV(estimator=pipe,
+                                    param_distributions=param_grid,
+                                    n_iter=50,
+                                    scoring=scoring,
+                                    cv=cv_inner,
+                                    refit=True,
+                                    verbose=verbose,
+                                    random_state=random_state,
+                                    n_jobs=-1
+                                    )
+    else:  # knn, nb
+        search = GridSearchCV(estimator=pipe,
+                              param_grid=param_grid,
+                              scoring=scoring,
+                              cv=cv_inner,
+                              refit=True,
+                              verbose=verbose,
+                              n_jobs=-1
+                              )
     search = GridSearchCV(estimator=pipe,
                           param_grid=param_grid,
                           scoring=scoring,
                           cv=cv_inner,
                           refit=True,
                           verbose=verbose,
+                          n_jobs=-1
                           )
     return search
 
@@ -129,9 +150,9 @@ def run_cross_validation(model,
                          X,
                          y,
                          n_splits: int = 5,
-                         n_repeats: int = 10,
+                         n_repeats: int = 3,
                          random_state: int = 42,
-                         scoring: Optional[dict] = None,
+                         scoring: dict | None = None,
                         ) -> pd.DataFrame:
     """
     Evaluate model with RepeatedStratifiedKFold and return a tidy DataFrame
@@ -151,6 +172,7 @@ def run_cross_validation(model,
                                 cv= cv,
                                 scoring= scoring,
                                 return_train_score = True,
+                                n_jobs=-1
                                 )
 
     # Keep only test scores and strip the "test_" prefix
