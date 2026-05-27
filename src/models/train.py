@@ -12,6 +12,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import ComplementNB
 from xgboost import XGBClassifier
+from sklearn.svm import SVC
 from sklearn.metrics import make_scorer, accuracy_score, f1_score, roc_auc_score
 from sklearn.model_selection import (GridSearchCV,
                                      RandomizedSearchCV,
@@ -28,6 +29,10 @@ DEFAULT_CV_SCORING = {"recall": "recall_weighted",
                      }
 #####################################################################
 # module with functions of training process
+# ---------------------------------------------------------------------------
+# Hyperparameter grids
+# ---------------------------------------------------------------------------
+
 def build_param_grid(model: str) -> dict | None:
     """
     Return the hyperparameter grid for GridSearchCV.
@@ -44,6 +49,7 @@ def build_param_grid(model: str) -> dict | None:
             "classifier__min_samples_leaf": [1, 2, 5, 10],
             "classifier__max_features": [None, "sqrt", "log2"],
             "classifier__class_weight": ["balanced"],
+            "classifier__ccp_alpha": [0, 0.1, 0.5, 1.0, 2.0],
             **selector_k,
         }
 
@@ -56,6 +62,7 @@ def build_param_grid(model: str) -> dict | None:
             "classifier__min_samples_leaf": [1, 2, 5, 10],
             "classifier__max_features": [None, "sqrt", "log2"],
             "classifier__class_weight": ["balanced"],
+            "ccp_alpha": [0, 0.1, 0.5, 1.0, 2.0],
             **selector_k,
         }
 
@@ -68,12 +75,15 @@ def build_param_grid(model: str) -> dict | None:
             **selector_k,
         }
 
-    elif model == "naive_bayes":
-        return {
-            "classifier__alpha": [0.001, 0.01, 0.1, 0.5, 1.0, 2.0, 5.0],
-            "classifier__norm": [True, False],
-            **selector_k,
-        }
+
+    elif model == "svc":
+
+        return {"classifier__C": [0.1, 1.0, 10.0, 100.0],
+                "classifier__kernel": ["rbf", "poly"],
+                "classifier__gamma": ["scale", "auto", 0.001, 0.01, 0.1],
+                "classifier__class_weight": ["balanced"],
+                **selector_k,
+                }
 
     elif model == "xgboost":
         return {
@@ -83,13 +93,36 @@ def build_param_grid(model: str) -> dict | None:
             "classifier__subsample": [0.6, 0.8, 1.0],
             "classifier__colsample_bytree": [0.6, 0.8, 1.0],
             "classifier__scale_pos_weight": [1, 5, 10, 25],
-            "classifier__reg_alpha": [0, 0.1, 1.0],
+            "classifier__reg_alpha": [0, 0.1, 0.5, 1.0],
             "classifier__reg_lambda": [1.0, 5.0, 10.0],
             **selector_k,
         }
 
     else:
         return None
+
+# ---------------------------------------------------------------------------
+# Pipeline + search object (inner CV loop)
+# ---------------------------------------------------------------------------
+
+
+def get_select_k_best_features(fitted_model,
+                               feature_names,
+                              ) -> pd.DataFrame:
+    """
+    Return SelectKBest feature scores from a fitted GridSearchCV pipeline.
+    """
+    selector = fitted_model.best_estimator_.named_steps.get("selector")
+
+    features_df = pd.DataFrame({"feature": list(feature_names),
+                                "score": selector.scores_,
+                                "selected": selector.get_support(),
+                                })
+
+    features_df = features_df.sort_values(["selected", "score"],
+                                          ascending=[False, False])
+
+    return features_df.reset_index(drop=True)
 
 
 # First repetition of the cross-validation nest
@@ -108,13 +141,16 @@ def build_model(model: str = "dt",
     classifiers = {"dt":  DecisionTreeClassifier(random_state=random_state),
                    "rf":  RandomForestClassifier(random_state=random_state),
                    "knn": KNeighborsClassifier(),
-                   "nb":  ComplementNB(),
+                   "svc": SVC(kernel="rbf",
+                              probability=True,
+                              class_weight="balanced",
+                              max_iter=1000),
                    "xgb": XGBClassifier(random_state=random_state,
                                         eval_metric="logloss",
                                         use_label_encoder=False)
                    }
 
-    scaler = MinMaxScaler() if model == "nb" else StandardScaler()
+    scaler = StandardScaler()
 
     pipe = Pipeline([("scaler", scaler),
                      ("selector", SelectKBest(score_func=mutual_info_classif)),
@@ -143,6 +179,11 @@ def build_model(model: str = "dt",
                               )
     
     return search
+
+# ---------------------------------------------------------------------------
+# Outer CV loop
+# ---------------------------------------------------------------------------
+
 
 # Second repetition of the cross-validation nest
 def run_cross_validation(model,
@@ -180,6 +221,11 @@ def run_cross_validation(model,
     return scores_df
 
 
+# ---------------------------------------------------------------------------
+# Saving and loading of Models
+# ---------------------------------------------------------------------------
+
+
 # post model training functions, i.e. run on test dataset, save model...
 def save_model(model,
                X_train,
@@ -194,25 +240,6 @@ def save_model(model,
     joblib.dump(model, model_path)
     print(f"Fitted model saved into {model_path}")
     return model
-
-
-def get_select_k_best_features(fitted_model,
-                               feature_names,
-                              ) -> pd.DataFrame:
-    """
-    Return SelectKBest feature scores from a fitted GridSearchCV pipeline.
-    """
-    selector = fitted_model.best_estimator_.named_steps.get("selector")
-
-    features_df = pd.DataFrame({"feature": list(feature_names),
-                                "score": selector.scores_,
-                                "selected": selector.get_support(),
-                                })
-
-    features_df = features_df.sort_values(["selected", "score"],
-                                          ascending=[False, False])
-
-    return features_df.reset_index(drop=True)
 
 
 def load_model(model_path: str):

@@ -11,10 +11,18 @@ from src.models.train import (build_param_grid,
 from src.plotters.get_plots import (plot_cv_metrics,
                                     plot_feature_summary_heatmap,
                                     plot_select_k_best_scores)
+from src.interpretability_tools.get_interpret   import (run_permutation_importance,
+                                                        plot_permutation_importance,
+                                                        run_ceteris_paribus,
+                                                        run_ice_plots,
+                                                        get_shap_explainer,
+                                                        run_shap_analysis)
+import dalex as dx
+
 #################################################################################
 # global vars of relative paths
-INPUT_PATH = '/home/dsousa/cmp263---autoimune_dataset/src/dataset/fixed_dataset.csv'
-OUTPUT_DIR = '/home/dsousa/cmp263---autoimune_dataset/outputs/outputs_houou1'
+INPUT_PATH = '/home/debs/python_projects/cmp263---autoimune_dataset/src/dataset/fixed_dataset.csv'
+OUTPUT_DIR = '/home/debs/python_projects/cmp263---autoimune_dataset/outputs'
 
 #################################################################################
 def run_pipeline(X_train,
@@ -40,7 +48,7 @@ def run_pipeline(X_train,
     to model fitting in whole dataset
     """
 
-    print("\n══ Step 1 / 4 — Building GridSearchCV model ══")
+    print("\n══ Step 1 / 8 — Building GridSearchCV model ══")
     model = build_model(model= model_name,
                         param_grid= param_grid,
                         scoring= search_scoring,
@@ -48,7 +56,7 @@ def run_pipeline(X_train,
                         random_state = random_state,
                         )
 
-    print("\n══ Step 2 / 4 — Running outer cross-validation ══")
+    print("\n══ Step 2 / 8 — Running outer cross-validation ══")
     scores_df = run_cross_validation(model= model,
                                      X= X_train,
                                      y= y_train,
@@ -57,20 +65,28 @@ def run_pipeline(X_train,
                                      random_state= random_state,
                                      scoring= cv_scoring,
                                      )
+    # TODO:change the saving of model best params to a function later
+    params_df = pd.DataFrame([model.best_params_])
+    params_df.insert(0, "model", model_prefix)
+    model_hyperparam_filename = model_prefix + "_hyperparams.csv"
+    model_hyperparam_output_path = os.path.join(output_dir, model_hyperparam_filename)
+    params_df.to_csv(model_hyperparam_output_path, mode="a", index=False)
+    print(f"model best params saved @ {model_hyperparam_output_path}")
+
     # save it as .csv
     metrics_filename = model_prefix + "_cv_metrics.csv"
     metrics_output_path = os.path.join(output_dir, metrics_filename)
     scores_df.to_csv(metrics_output_path, index=False)
     print(scores_df.describe().T[["mean", "std"]].round(4))
 
-    print("\n══ Step 3 / 4 — Plotting CV metrics ══")
+    print("\n══ Step 3 / 8 — Plotting CV metrics ══")
     plot_cv_metrics(scores_df,
                     output_dir=output_dir,
                     file_format=plot_format,
                     model_prefix=model_prefix
                     )
 
-    print("\n══ Step 4 / 4 — Fitting on full data & saving model ══")
+    print("\n══ Step 4 / 8 — Fitting on full data & saving model ══")
     model_filename = model_prefix + "_model.joblib"
     model_path   = os.path.join(output_dir, model_filename)
     fitted_model = save_model(model, X_train, y_train, model_path=model_path)
@@ -89,7 +105,51 @@ def run_pipeline(X_train,
                               model_prefix=model_prefix,
                               )
 
+    print("\n══ Step 5 / 8 — permutation importance ══")
+    perm_imp_csv_filename = model_prefix + "permutation_importance.csv"
+    perm_imp_csv_output_path = os.path.join(output_dir, perm_imp_csv_filename)
+    perm_imp_png_filename = model_prefix + "permutation_importance.png"
+    perm_imp_png_output_path = os.path.join(output_dir, perm_imp_png_filename)
+    perm_df = run_permutation_importance(clf=model,
+                                         X_train=X_train,
+                                         y_train=y_train,
+                                         feature_names=X_train.columns.tolist(),
+                                         output_path=perm_imp_csv_output_path,
+                                         )
+    plot_permutation_importance(perm_df, output_path=perm_imp_png_output_path)
+
+    #TODO: fix ceteris paribus
+    # print("\n══ Step 6 / 8 — ceteris paribus ══")
+    # exp = dx.Explainer(fitted_model, X_train, y_train, label=model_prefix)
+    # cet_pari_csv_filename = model_prefix + "ceteris_paribus.csv"
+    # cet_pari_csv_output_path = os.path.join(output_dir, cet_pari_csv_filename)
+    # cp_df = run_ceteris_paribus(exp=exp,
+    #                             X=X_train,
+    #                             y=y_train,
+    #                             observation_indices=[2, 5, 10],
+    #                             output_dir=f"{OUTPUT_DIR}/cp_profiles",
+    #                             combined_path=cet_pari_csv_output_path,
+    #                             )
+
+    print("\n══ Step 7 / 8 — ICE + PDP ══")
+    run_ice_plots(model=model,
+                  X_train=X_train,
+                  feature_list=selected_features["feature"].tolist(),
+                  output_dir=f"{OUTPUT_DIR}/ice_plots",
+                  subsample=0.3,
+                  random_state=42,
+    )
+
+    # Step 8 — SHAP
+    shap_df = run_shap_analysis(clf=model,
+                                X_train=X_train,
+                                observation_indices=[2, 5, 10],
+                                selected_features=selected_features,
+                                output_dir=f"{OUTPUT_DIR}/shap_plots",
+                                )
+
     print("\n══ Pipeline complete ══\n")
+
     return {"model": fitted_model,
             "cv_scores": scores_df,
             "selected_features": selected_features,
@@ -128,7 +188,8 @@ if __name__ == "__main__":
     param_grid_dt = build_param_grid(model= "decision_tree")
     param_grid_rf = build_param_grid(model= "random_forest")
     param_grid_knn = build_param_grid(model= "knn")
-    param_grid_nb = build_param_grid(model= "naive_bayes")
+    param_grid_svc = build_param_grid(model= "svc")
+    # param_grid_nb = build_param_grid(model= "naive_bayes")
     param_grid_xgb = build_param_grid(model= "xgboost")
 
     # plot heatmatp feats
@@ -176,15 +237,15 @@ if __name__ == "__main__":
                                )
 
     # naive bayes
-    results_nb = run_pipeline(X_train=X_train,
+    results_svc = run_pipeline(X_train=X_train,
                               y_train=y_train,
-                              param_grid=param_grid_nb,
-                              model_name="nb",
+                              param_grid=param_grid_svc,
+                              model_name="svc",
                               cv_inner=5,
                               n_splits=5,
                               n_repeats=3,
                               output_dir=OUTPUT_DIR,
-                              model_prefix="naive_bayes",
+                              model_prefix="svc",
                               random_state=42,
                               )
 
