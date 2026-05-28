@@ -65,14 +65,6 @@ def run_pipeline(X_train,
                                      random_state= random_state,
                                      scoring= cv_scoring,
                                      )
-    # TODO:change the saving of model best params to a function later
-    params_df = pd.DataFrame([model.best_params_])
-    params_df.insert(0, "model", model_prefix)
-    model_hyperparam_filename = model_prefix + "_hyperparams.csv"
-    model_hyperparam_output_path = os.path.join(output_dir, model_hyperparam_filename)
-    params_df.to_csv(model_hyperparam_output_path, mode="a", index=False)
-    print(f"model best params saved @ {model_hyperparam_output_path}")
-
     # save it as .csv
     metrics_filename = model_prefix + "_cv_metrics.csv"
     metrics_output_path = os.path.join(output_dir, metrics_filename)
@@ -90,7 +82,14 @@ def run_pipeline(X_train,
     model_filename = model_prefix + "_model.joblib"
     model_path   = os.path.join(output_dir, model_filename)
     fitted_model = save_model(model, X_train, y_train, model_path=model_path)
-    print(f"\nBest params found:\n{fitted_model.best_params_}\n")
+    print(f"\nFinal full-training refit params:\n{fitted_model.best_params_}\n")
+
+    params_df = pd.DataFrame([fitted_model.best_params_])
+    params_df.insert(0, "model", model_prefix)
+    model_hyperparam_filename = model_prefix + "_fitted_hyperparams.csv"
+    model_hyperparam_output_path = os.path.join(output_dir, model_hyperparam_filename)
+    params_df.to_csv(model_hyperparam_output_path, index=False)
+    print(f"Fitted model params saved @ {model_hyperparam_output_path}")
 
     selected_features = get_select_k_best_features(fitted_model=fitted_model,
                                                    feature_names=X_train.columns)
@@ -110,13 +109,14 @@ def run_pipeline(X_train,
     perm_imp_csv_output_path = os.path.join(output_dir, perm_imp_csv_filename)
     perm_imp_png_filename = model_prefix + "permutation_importance.png"
     perm_imp_png_output_path = os.path.join(output_dir, perm_imp_png_filename)
-    perm_df = run_permutation_importance(clf=model,
+    perm_df = run_permutation_importance(clf=fitted_model,
                                          X_train=X_train,
                                          y_train=y_train,
                                          feature_names=X_train.columns.tolist(),
                                          output_path=perm_imp_csv_output_path,
                                          )
-    plot_permutation_importance(perm_df, output_path=perm_imp_png_output_path)
+    plot_permutation_importance(perm_df, output_path=perm_imp_png_output_path,
+                                model_prefix=model_prefix)
 
     #TODO: fix ceteris paribus
     # print("\n══ Step 6 / 8 — ceteris paribus ══")
@@ -132,20 +132,22 @@ def run_pipeline(X_train,
     #                             )
 
     print("\n══ Step 7 / 8 — ICE + PDP ══")
-    run_ice_plots(model=model,
+    run_ice_plots(model=fitted_model,
                   X_train=X_train,
                   feature_list=selected_features["feature"].tolist(),
                   output_dir=f"{OUTPUT_DIR}/ice_plots",
                   subsample=0.3,
                   random_state=42,
-    )
+                  model_prefix=model_prefix
+                  )
 
     # Step 8 — SHAP
-    shap_df = run_shap_analysis(clf=model,
+    shap_df = run_shap_analysis(clf=fitted_model,
                                 X_train=X_train,
                                 observation_indices=[2, 5, 10],
                                 selected_features=selected_features,
                                 output_dir=f"{OUTPUT_DIR}/shap_plots",
+                                model_prefix=model_prefix
                                 )
 
     print("\n══ Pipeline complete ══\n")

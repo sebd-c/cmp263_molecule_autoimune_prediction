@@ -270,7 +270,7 @@ def run_shap_analysis(clf,
                       observation_indices: list[int] | None = None,
                       selected_features: pd.DataFrame | None = None,
                       output_dir: str = "shap_plots",
-                      model_prefix:str = None,
+                      model_prefix:str = '',
                       ) -> pd.DataFrame:
     """
     Compute SHAP values and save beeswarm summary, bar plot, waterfall

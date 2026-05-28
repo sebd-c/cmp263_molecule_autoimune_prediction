@@ -62,7 +62,7 @@ def build_param_grid(model: str) -> dict | None:
             "classifier__min_samples_leaf": [1, 2, 5, 10],
             "classifier__max_features": [None, "sqrt", "log2"],
             "classifier__class_weight": ["balanced"],
-            "ccp_alpha": [0, 0.1, 0.5, 1.0, 2.0],
+            "classifier__ccp_alpha": [0, 0.1, 0.5, 1.0, 2.0],
             **selector_k,
         }
 
@@ -215,7 +215,6 @@ def run_cross_validation(model,
                                 n_jobs=-1
                                 )
 
-    # Keep only test scores and strip the "test_" prefix
     scores_df = pd.DataFrame(cv_results)
 
     return scores_df
