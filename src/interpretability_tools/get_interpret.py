@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import shap
+from joblib import parallel_backend
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.inspection import PartialDependenceDisplay, permutation_importance
 from sklearn.linear_model import LogisticRegression
@@ -128,6 +129,8 @@ def run_ice_plots(model,
                   subsample: float = 0.3,
                   random_state: int = 42,
                   model_prefix: str = "",
+                  n_jobs: int | None = -1,
+                  joblib_backend: str = "threading",
                   ) -> None:
     """
     Generate ICE + PDP mean plots
@@ -146,17 +149,19 @@ def run_ice_plots(model,
                                  )
         axes = axes.flatten()
 
-        display = PartialDependenceDisplay.from_estimator(model,
-                                                          X_train,
-                                                          features=feature_list,
-                                                          target=target_class,
-                                                          kind="both",
-                                                          subsample=subsample,
-                                                          random_state=random_state,
-                                                          ax=axes[:len(feature_list)],
-                                                          ice_lines_kw={"color": "#85B7EB", "alpha": 0.3, "linewidth": 0.8},
-                                                          pd_line_kw={"color": "#185FA5", "linewidth": 2.0},
-                                                          )
+        with parallel_backend(joblib_backend):
+            display = PartialDependenceDisplay.from_estimator(model,
+                                                              X_train,
+                                                              features=feature_list,
+                                                              target=target_class,
+                                                              kind="both",
+                                                              subsample=subsample,
+                                                              random_state=random_state,
+                                                              n_jobs=n_jobs,
+                                                              ax=axes[:len(feature_list)],
+                                                              ice_lines_kw={"color": "#85B7EB", "alpha": 0.3, "linewidth": 0.8},
+                                                              pd_line_kw={"color": "#185FA5", "linewidth": 2.0},
+                                                              )
 
         for ax in axes[len(feature_list):]:
             ax.set_visible(False)
@@ -369,4 +374,3 @@ def run_shap_analysis(clf,
     #     print(f"shap_waterfall_obs{idx}.png saved")
 
     return shap_df
-

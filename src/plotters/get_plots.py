@@ -40,7 +40,7 @@ def plot_cv_metrics(scores_df: pd.DataFrame,
     axes[0].set_ylabel("Score")
 
     axes[1].boxplot(scores_df[test_cols], tick_labels=metric_labels, showmeans=True)
-    axes[1].set_title("Test")
+    axes[1].set_title("Validation")
 
     plt.tight_layout()
 

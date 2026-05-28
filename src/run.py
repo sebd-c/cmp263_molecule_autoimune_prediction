@@ -131,24 +131,24 @@ def run_pipeline(X_train,
     #                             combined_path=cet_pari_csv_output_path,
     #                             )
 
-    print("\n══ Step 7 / 8 — ICE + PDP ══")
-    run_ice_plots(model=fitted_model,
-                  X_train=X_train,
-                  feature_list=selected_features["feature"].tolist(),
-                  output_dir=f"{OUTPUT_DIR}/ice_plots",
-                  subsample=0.3,
-                  random_state=42,
-                  model_prefix=model_prefix
-                  )
-
-    # Step 8 — SHAP
-    shap_df = run_shap_analysis(clf=fitted_model,
-                                X_train=X_train,
-                                observation_indices=[2, 5, 10],
-                                selected_features=selected_features,
-                                output_dir=f"{OUTPUT_DIR}/shap_plots",
-                                model_prefix=model_prefix
-                                )
+    # print("\n══ Step 7 / 8 — ICE + PDP ══")
+    # run_ice_plots(model=fitted_model,
+    #               X_train=X_train,
+    #               feature_list=selected_features["feature"].tolist(),
+    #               output_dir=f"{OUTPUT_DIR}/ice_plots",
+    #               subsample=0.1,
+    #               random_state=42,
+    #               model_prefix=model_prefix
+    #               )
+    #
+    # # Step 8 — SHAP
+    # shap_df = run_shap_analysis(clf=fitted_model,
+    #                             X_train=X_train,
+    #                             observation_indices=[2, 5, 10],
+    #                             selected_features=selected_features,
+    #                             output_dir=f"{OUTPUT_DIR}/shap_plots",
+    #                             model_prefix=model_prefix
+    #                             )
 
     print("\n══ Pipeline complete ══\n")
 
