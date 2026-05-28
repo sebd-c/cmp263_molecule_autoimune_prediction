@@ -1,4 +1,4 @@
-# cmp263---autoimune_dataset
+# cmp263_molecule_autoimune_prediction
 
 Code for running and evaluating the CMP263 autoimmune dataset models.
 
